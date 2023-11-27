@@ -2,6 +2,7 @@ import requests
 import logging
 import pandas as pd
 import json
+import os
 from dotenv import dotenv_values
 from datetime import datetime
 
@@ -16,9 +17,9 @@ def read_timestamp_INACTIVE():
             timestamp = file.read().strip()
             return timestamp
     except FileNotFoundError:
-        # Set a default timestamp for the first run
-        print("timestamp_INACTIVE.txt file not found. First run detected. Using default timestamp of 2023-07-31")
-        return '2023-07-31'
+        # Set default timestamp for the first run
+        print("timestamp_INACTIVE.txt file not found. Using default timestamp - NONE")
+        return ''
 
 
 # Function to write the current timestamp to the text file
@@ -31,25 +32,10 @@ def write_timestamp_INACTIVE():
 # Read the last run timestamp
 timestamp_INACTIVE = read_timestamp_INACTIVE()
 
-print(f'This script was last run on: {timestamp_INACTIVE}\nThe query will return NEW members since this date.')
-user_input = input("Type 'yes' to continue or enter a different date in this format YYYY-MM-DD: ")
+if timestamp_INACTIVE == '':
+    print(f'This script has never been run. Please enter a date for this script to retrieve all NEWLY INACTIVE members since that date.')
+    user_input = input("Enter the desired date in the format YYYY-MM-DD: ")
 
-if user_input == 'yes':
-    payload = {
-        'Key': config['API_KEY'],
-        'Operation': 'GetEntities',
-        'Entity': 'cobalt_membership',
-        'Filter': f'modifiedon<ge>{timestamp_INACTIVE} AND '
-                  'statuscode<eq>2 AND '
-                  'ramco_associationid<eq>D9F2A0F9-F420-E111-B470-00155D000140 AND '
-                  'ramco_primarymembership<eq>true AND '
-                  '(cobalt_MemberTypeId<eq>d00b84b0-ef20-e111-b470-00155d000140 OR '
-                  'cobalt_MemberTypeId<eq>d20b84b0-ef20-e111-b470-00155d000140 OR'
-                  'cobalt_MemberTypeId<eq>3DAC84A7-AA47-E611-84A6-00155D24B70C)',
-        'Attributes': 'cobalt_contact_cobalt_membership/firstname,cobalt_contact_cobalt_membership/lastname,cobalt_contact_cobalt_membership/emailaddress1',
-        'streamToken': None
-    }
-else:
     payload = {
         'Key': config['API_KEY'],
         'Operation': 'GetEntities',
@@ -59,13 +45,52 @@ else:
                   'ramco_associationid<eq>D9F2A0F9-F420-E111-B470-00155D000140 AND '
                   'ramco_primarymembership<eq>true AND '
                   '(cobalt_MemberTypeId<eq>d00b84b0-ef20-e111-b470-00155d000140 OR '
-                  'cobalt_MemberTypeId<eq>d20b84b0-ef20-e111-b470-00155d000140 OR'
-                  'cobalt_MemberTypeId<eq>3DAC84A7-AA47-E611-84A6-00155D24B70C)',
+                  'cobalt_MemberTypeId<eq>d20b84b0-ef20-e111-b470-00155d000140 OR '
+                  'cobalt_MemberTypeId<eq>3DAC84A7-AA47-E611-84A6-00155D24B70C OR '
+                  'cobalt_MemberTypeId<eq>D40B84B0-EF20-E111-B470-00155D000140)',
         'Attributes': 'cobalt_contact_cobalt_membership/firstname,cobalt_contact_cobalt_membership/lastname,cobalt_contact_cobalt_membership/emailaddress1',
         'streamToken': None
     }
 
-streamToken = None
+    streamToken = None
+else:
+    print(f'This script was last run on: {timestamp_INACTIVE}\nThe query will return NEWLY INACTIVE members since this date.')
+    user_input = input("Type 'yes' to continue OR enter a different date in the format YYYY-MM-DD: ")
+
+    if user_input == 'yes':
+        payload = {
+            'Key': config['API_KEY'],
+            'Operation': 'GetEntities',
+            'Entity': 'cobalt_membership',
+            'Filter': f'modifiedon<ge>{timestamp_INACTIVE} AND '
+                      'statuscode<eq>2 AND '
+                      'ramco_associationid<eq>D9F2A0F9-F420-E111-B470-00155D000140 AND '
+                      'ramco_primarymembership<eq>true AND '
+                      '(cobalt_MemberTypeId<eq>d00b84b0-ef20-e111-b470-00155d000140 OR '
+                      'cobalt_MemberTypeId<eq>d20b84b0-ef20-e111-b470-00155d000140 OR '
+                      'cobalt_MemberTypeId<eq>3DAC84A7-AA47-E611-84A6-00155D24B70C OR '
+                      'cobalt_MemberTypeId<eq>D40B84B0-EF20-E111-B470-00155D000140)',
+            'Attributes': 'cobalt_contact_cobalt_membership/firstname,cobalt_contact_cobalt_membership/lastname,cobalt_contact_cobalt_membership/emailaddress1',
+            'streamToken': None
+        }
+    else:
+        payload = {
+            'Key': config['API_KEY'],
+            'Operation': 'GetEntities',
+            'Entity': 'cobalt_membership',
+            'Filter': f'modifiedon<ge>{user_input} AND '
+                      'statuscode<eq>2 AND '
+                      'ramco_associationid<eq>D9F2A0F9-F420-E111-B470-00155D000140 AND '
+                      'ramco_primarymembership<eq>true AND '
+                      '(cobalt_MemberTypeId<eq>d00b84b0-ef20-e111-b470-00155d000140 OR '
+                      'cobalt_MemberTypeId<eq>d20b84b0-ef20-e111-b470-00155d000140 OR '
+                      'cobalt_MemberTypeId<eq>3DAC84A7-AA47-E611-84A6-00155D24B70C OR '
+                      'cobalt_MemberTypeId<eq>D40B84B0-EF20-E111-B470-00155D000140)',
+            'Attributes': 'cobalt_contact_cobalt_membership/firstname,cobalt_contact_cobalt_membership/lastname,cobalt_contact_cobalt_membership/emailaddress1',
+            'streamToken': None
+        }
+
+    streamToken = None
 
 
 def extract_fields(json_data, fields, default_value=None):
@@ -103,7 +128,7 @@ def extract_fields(json_data, fields, default_value=None):
 
 
 def export_to_excel(extracted_fields_list, excel_file_path):
-    """Exports the given list of fields to an Excel file (.xlsx).
+    """Exports the given list of fields to an Excel file (.xlsx), appending to existing file if it exists.
 
     Args:
         extracted_fields_list: A list of lists, where each sublist is a list of values
@@ -112,10 +137,19 @@ def export_to_excel(extracted_fields_list, excel_file_path):
     """
 
     # Create a DataFrame from the extracted fields list
-    df = pd.DataFrame(extracted_fields_list, columns=['LastName', 'FirstName', 'EMailAddress1'])
+    new_data_df = pd.DataFrame(extracted_fields_list, columns=['LastName', 'FirstName', 'EMailAddress1'])
 
-    # Export the DataFrame to an Excel file
-    df.to_excel(excel_file_path, index=False)
+    # Check if the file exists
+    if os.path.isfile(excel_file_path):
+        # Read existing data
+        existing_data_df = pd.read_excel(excel_file_path)
+        # Append new data using concat
+        updated_df = pd.concat([existing_data_df, new_data_df], ignore_index=True)
+    else:
+        updated_df = new_data_df
+
+    # Export the updated DataFrame to an Excel file
+    updated_df.to_excel(excel_file_path, index=False)
 
 
 current_date = datetime.now().strftime('%Y-%m-%d')
