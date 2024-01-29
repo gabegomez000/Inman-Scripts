@@ -231,3 +231,4 @@ while True:
 
 write_timestamp_NEW()
 print(f'timestamp_NEW.txt updated with todays date: {current_date}')
+print('Script completed successfully. Terminating...')

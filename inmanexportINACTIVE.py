@@ -200,3 +200,4 @@ while True:
 
 write_timestamp_INACTIVE()
 print(f'timestamp_INACTIVE.txt updated with todays date: {current_date}')
+print('Script completed successfully. Terminating...')

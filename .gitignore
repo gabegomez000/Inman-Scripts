@@ -1,2 +1,5 @@
 
 .env
+timestamp_INACTIVE.txt
+timestamp_NEW.txt
+.idea
